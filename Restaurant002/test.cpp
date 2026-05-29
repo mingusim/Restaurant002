@@ -1,5 +1,7 @@
 ﻿#include "gmock/gmock.h"
 #include "booking_scheduler.cpp"
+#include "testable_sms_sender.cpp"
+
 using namespace testing;
 
 class BookingItem : public Test {
@@ -22,11 +24,14 @@ public:
 	const int CAPACITY_PER_HOUR = 3;
 
 	BookingScheduler bookingScheduler{ CAPACITY_PER_HOUR };
+	TestableSmsSender testableSmsSender;
 
 protected:
 	void SetUp() override {
 		NOT_ON_THE_HOUR = getTime(2026, 6, 26, 9, 5);
 		ON_THE_HOUR = getTime(2026, 6, 26, 9, 0);
+
+		bookingScheduler.setSmsSender(&testableSmsSender);
 	}
 };
 
@@ -80,7 +85,13 @@ TEST_F(BookingItem, 시간대별인원제한이있다같은시간대가다르면
 }
 
 TEST_F(BookingItem, 예약완료시SMS는무조건발송) {
+	//arrange
+	Schedule* schedule = new Schedule{ ON_THE_HOUR, CAPACITY_PER_HOUR, CUSTOMER };
 
+	//act
+	bookingScheduler.addSchedule(schedule);
+	//assert
+	EXPECT_EQ(true, testableSmsSender.isSendMethodIsCalled());
 }
 
 TEST_F(BookingItem, 이메일이없는경우에는이메일미발송) {
